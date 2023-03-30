@@ -16,6 +16,9 @@ struct ContentView: View {
     @State private var errorMessage = ""
     @State private var showingError = false
     
+    @State private var score = 0
+    
+    
     var body: some View {
         NavigationStack {
             List {
@@ -36,14 +39,30 @@ struct ContentView: View {
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
             .onAppear(perform: startGame)
+            .toolbar {
+                Button("New Word", action: startGame)
+            }
         }
         .alert("\(errorTitle)", isPresented: $showingError) {
             Button("Ok", role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
+        .safeAreaInset(edge: .bottom) {
+            Text("Score: \(score)")
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(.green)
+                .font(.title)
+                .foregroundColor(.white)
+        }
+        
+
     }
     func startGame() {
+        usedWords.removeAll()
+        score = 0
+        
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
@@ -72,9 +91,23 @@ struct ContentView: View {
             wordError(title: "Word not recognized", message: "You can't make them up, you know!")
             return
         }
-                
-        usedWords.insert(answer, at: 0)
+        
+        guard letterCount(word: answer) else {
+            wordError(title: "Word not possible", message: "Your word must have at least three letters!")
+            return
+        }
+        
+        guard sameWord(word: answer, root: rootWord) else {
+            wordError(title: "This is same word", message: "Your word must be different from the \(rootWord)!")
+            return
+        }
+              
+        withAnimation {
+            usedWords.insert(answer, at: 0)
+        }
+        
         newWord = ""
+        score += answer.count
     }
     
     func isOriginal(word: String) -> Bool {
@@ -103,11 +136,28 @@ struct ContentView: View {
         return misspelledRange.location == NSNotFound
     }
     
+    func letterCount(word: String) -> Bool {
+        if word.count >= 3 {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func sameWord(word: String, root: String) -> Bool {
+        if word == root {
+            return false
+        } else {
+            return true
+        }
+    }
+    
     func wordError(title: String, message: String) {
         errorTitle = title
         errorMessage = message
         showingError = true
     }
+    
 }
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
